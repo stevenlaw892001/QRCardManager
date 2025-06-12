@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Define the document title for the QR code generation page -->
+    <title>生成名片 - 公司名片二維碼生產</title>
+    <!-- Include Bootstrap 5 CSS from CDN for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Include custom CSS file for additional styling -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation bar with logo and menu -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <!-- Logo linking to the homepage -->
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="公司 Logo" class="logo">
+            </a>
+            <!-- Hamburger menu button for mobile view -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <!-- Navigation links and search bar -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="d-flex w-100 align-items-center">
+                    <!-- Navigation links aligned to the left -->
+                    <ul class="navbar-nav me-auto">
+                        <!-- Conditionally display admin links for admin users -->
+                        {% if current_user.role == 'admin' %}
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('add_admin') }}">新增管理員</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_users') }}">管理用戶</a></li>
+                        {% endif %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('change_password') }}">更改密碼</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}" data-bypass="true">登出</a></li>
+                    </ul>
+                    <!-- Search bar aligned to the right -->
+                    <form class="d-flex ms-auto" method="POST" action="{{ url_for('search') }}">
+                        <input class="form-control me-2 search-input" type="text" name="search_term" placeholder="輸入名片編號、中文名或英文名搜尋" required>
+                        <button class="btn btn-outline-danger" type="submit">搜尋</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content section for QR code generation -->
+    <div class="container py-5">
+        <!-- Page title for the QR code generation section -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-12">
+                <h1 class="text-center no-wrap mb-4 manage-users-title">生成名片 - 公司名片二維碼生產</h1>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-10 col-xl-8">
+                <div class="card shadow-lg p-4">
+                    <!-- Form for generating QR code with business card details -->
+                    <form method="POST" class="generate-form">
+                        <div class="row g-3">
+                            <div class="col-12 mb-3">
+                                <!-- Inform user that card ID is auto-generated -->
+                                <p class="text-muted">名片編號將自動生成，格式為 YYYYMMDD-XXX（例如 20250728-001）。</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">公司名稱:</label>
+                                <input type="text" class="form-control" name="company_name" value="{{ form_details.company_name if form_details else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">中文姓名:</label>
+                                <input type="text" class="form-control" name="staff_cname" value="{{ form_details.staff_cname if form_details else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">英文姓名:</label>
+                                <input type="text" class="form-control" name="staff_ename" value="{{ form_details.staff_ename if form_details else '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">職稱:</label>
+                                <input type="text" class="form-control" name="title" value="{{ form_details.title if form_details else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">電郵:</label>
+                                <input type="text" class="form-control" name="email" value="{{ form_details.email if form_details else '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">辦公室電話:</label>
+                                <input type="text" class="form-control" name="office_phone_no" value="{{ form_details.office_phone_no if form_details else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">手機號碼:</label>
+                                <input type="text" class="form-control" name="mobile_phone_no" value="{{ form_details.mobile_phone_no if form_details else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">手機號碼2:</label>
+                                <input type="text" class="form-control" name="mobile_phone_no1" value="{{ form_details.mobile_phone_no1 if form_details else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">QR Code 印刷日期:</label>
+                                <input type="date" class="form-control" name="print_date" value="{{ form_details.print_date if form_details else '' }}">
+                            </div>
+                            <div style="visibility: hidden;" class="col-12">
+                                <label class="form-label">網站:</label>
+                                <input type="text" class="form-control" name="website" value="{{ form_details.website if form_details else '' }}">
+                            </div>
+                            <div class="col-12">
+                                <!-- Submit button for generating QR code -->
+                                <input type="submit" class="btn btn-danger w-100 mt-3" value="生成 QR Code">
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Display flash messages (e.g., success or error messages) -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            <div class="mt-4">
+                                {% for category, message in messages %}
+                                    <p class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">{{ message }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                    <!-- Modal for overwrite warning -->
+                    {% if show_warning %}
+                    <div class="modal fade" id="overwriteWarningModal" tabindex="-1" aria-labelledby="overwriteWarningLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="overwriteWarningLabel">警告：電郵已存在</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>電郵 <strong>{{ form_details.email }}</strong> 已存在。繼續操作將創建新記錄，確定要繼續嗎？</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <form method="POST">
+                                        <input type="hidden" name="action" value="confirm_create">
+                                        <input type="hidden" name="card_id" value="{{ form_details.card_id }}">
+                                        <input type="hidden" name="staff_cname" value="{{ form_details.staff_cname }}">
+                                        <input type="hidden" name="staff_ename" value="{{ form_details.staff_ename }}">
+                                        <input type="hidden" name="company_name" value="{{ form_details.company_name }}">
+                                        <input type="hidden" name="title" value="{{ form_details.title }}">
+                                        <input type="hidden" name="email" value="{{ form_details.email }}">
+                                        <input type="hidden" name="office_phone_no" value="{{ form_details.office_phone_no }}">
+                                        <input type="hidden" name="mobile_phone_no" value="{{ form_details.mobile_phone_no }}">
+                                        <input type="hidden" name="mobile_phone_no1" value="{{ form_details.mobile_phone_no1 }}">
+                                        <input type="hidden" name="website" value="{{ form_details.website }}">
+                                        <input type="hidden" name="print_date" value="{{ form_details.print_date }}">
+                                        <button type="submit" class="btn btn-danger">確認創建</button>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for QR code preview -->
+    {% if qr_download_url %}
+    <div class="modal fade" id="qrPreviewModal" tabindex="-1" aria-labelledby="qrPreviewLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="qrPreviewLabel">QR Code 預覽</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+          </div>
+          <div class="modal-body text-center">
+            <img src="{{ qr_download_url }}" alt="QR Code 預覽" class="img-fluid mb-3">
+            <br>
+            <a href="{{ qr_download_url }}" download class="btn btn-success">📥 下載 QR Code</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Include Bootstrap 5 JS bundle from CDN for interactive components -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- JavaScript to show modals on page load if applicable -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            {% if qr_download_url %}
+                var previewModal = new bootstrap.Modal(document.getElementById('qrPreviewModal'));
+                previewModal.show();
+            {% endif %}
+            {% if show_warning %}
+                var warningModal = new bootstrap.Modal(document.getElementById('overwriteWarningModal'));
+                warningModal.show();
+            {% endif %}
+        });
+    </script>
+    <!-- Include custom heartbeat script for session management -->
+    <script src="{{ url_for('static', filename='js/heartbeat.js') }}"></script>
+</body>
+</html>

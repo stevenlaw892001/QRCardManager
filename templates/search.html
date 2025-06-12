@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Define the document title for the business card search page -->
+    <title>搜尋名片 - 公司名片二維碼生產</title>
+    <!-- Include Bootstrap 5 CSS from CDN for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Include custom CSS file for additional styling -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Inline CSS for search page specific styling -->
+    <style>
+        /* Main content background and padding */
+        .search-container {
+            background-color: #F8F9FA;
+            padding: 20px 0;
+        }
+
+        /* Search form styling */
+        .search-form {
+            background-color: #FFFFFF;
+            border: 1px solid #E0E0E0;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Search result card styling */
+        .result-card {
+            background-color: #F5F5F5;
+            border: 1px solid #E0E0E0;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        /* Table styling */
+        .result-table th {
+            background-color: #F5F5F5;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .result-table td {
+            vertical-align: middle;
+        }
+
+        .result-table .qr-code {
+            max-width: 120px; /* QR code size in table (desktop) */
+            height: auto;
+            cursor: pointer; /* Show hand cursor on hover */
+        }
+
+        /* QR code in modal */
+        .modal-qr-code {
+            width: 100%; /* Display original size */
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Modal form labels */
+        .modal-body .form-label {
+            font-weight: 500;
+        }
+
+        /* Title styling */
+        .search-title {
+            font-size: 2.5rem; /* Default 40px */
+        }
+
+        /* Responsive adjustments for small screens */
+        @media (max-width: 576px) {
+            .search-container {
+                padding-left: 0; /* Remove container padding */
+                padding-right: 0;
+            }
+            .search-form, .result-card {
+                border-radius: 0; /* Remove border radius on small screens */
+                border-left: none; /* Remove side borders */
+                border-right: none;
+            }
+            .search-title {
+                font-size: 1.75rem; /* Reduce to 28px on small screens */
+            }
+            .result-table .qr-code {
+                max-width: 100px; /* QR code size in table (mobile) */
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation bar with logo and menu -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <!-- Logo linking to the homepage -->
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="公司 Logo" class="logo">
+            </a>
+            <!-- Hamburger menu button for mobile view -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <!-- Navigation links and search bar -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="d-flex w-100 align-items-center">
+                    <!-- Navigation links aligned to the left -->
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('index') }}">返回主頁</a>
+                        </li>
+                        <!-- Conditionally display admin links for admin users -->
+                        {% if current_user.role == 'admin' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('add_admin') }}">新增管理員</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('manage_users') }}">管理用戶</a>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('change_password') }}">更改密碼</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}" data-bypass="true">登出</a>
+                        </li>
+                    </ul>
+                    <!-- Search bar aligned to the right -->
+                    <form class="d-flex ms-auto" method="POST" action="{{ url_for('search') }}">
+                        <input class="form-control me-2 search-input" type="text" name="search_term" placeholder="輸入名片編號、中文名或英文名搜尋" required>
+                        <button class="btn btn-outline-danger" type="submit">搜尋</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content section for business card search -->
+    <div class="container mt-5 search-container">
+        <!-- Page title for the search section -->
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center no-wrap mb-4 manage-users-title search-title">搜尋名片 - 公司名片二維碼生產</h1>
+            </div>
+        </div>
+        <!-- Search form and results -->
+        <div class="row">
+            <div class="col-12">
+                <!-- Display flash messages (e.g., success or error messages) -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} mb-4" role="alert">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                <!-- Search form -->
+                <div class="row justify-content-center">
+                    <div class="col-12">
+                        <form method="POST" class="search-form mb-5">
+                            <div class="mb-3">
+                                <label class="form-label">名片編號</label>
+                                <input type="text" class="form-control" name="search_term" placeholder="輸入名片編號、中文名或英文名搜尋" required>
+                            </div>
+                            <!-- Submit button for the search form -->
+                            <input type="submit" class="btn btn-danger w-100" value="搜尋">
+                        </form>
+                    </div>
+                </div>
+                <!-- Search results -->
+                {% if results %}
+                <div class="row justify-content-center">
+                    <div class="col-12">
+                        <div class="result-card">
+                            <!-- Section title for search results -->
+                            <h2 class="text-center mb-4">搜尋結果</h2>
+                            <div class="table-responsive">
+                                <!-- Table to display search results -->
+                                <table class="table table-hover mb-0 result-table">
+                                    <thead>
+                                        <tr>
+                                            <th>名片編號</th>
+                                            <th>中文姓名</th>
+                                            <th>英文姓名</th>
+                                            <th>印刷日期</th>
+                                            <th>QR Code</th>
+                                            <th>操作</th>
+                                            <th>下載</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for result in results %}
+                                        <tr>
+                                            <td>{{ result[0] }}</td>
+                                            <td>{{ result[1] or '-' }}</td>
+                                            <td>{{ result[2] or '-' }}</td>
+                                            <td>{{ result[11] or '-' }}</td>
+                                            <td>
+                                                <!-- QR code image with modal trigger -->
+                                                <img src="{{ url_for('static', filename='qr_codes/' + result[10]) }}" alt="QR Code" class="qr-code" data-bs-toggle="modal" data-bs-target="#qrModal-{{ loop.index }}">
+                                                <!-- Modal for QR code preview -->
+                                                <div class="modal fade" id="qrModal-{{ loop.index }}" tabindex="-1" aria-labelledby="qrModalLabel-{{ loop.index }}" aria-hidden="true">
+                                                    <div class="modal-dialog modal-dialog-centered">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title" id="qrModalLabel-{{ loop.index }}">掃描 QR Code - {{ result[0] }}</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body text-center">
+                                                                <img src="{{ url_for('static', filename='qr_codes/' + result[10]) }}" alt="QR Code" class="modal-qr-code">
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <!-- Form for copying card details -->
+                                                <form method="POST" style="display:inline;">
+                                                    <input type="hidden" name="action" value="copy">
+                                                    <input type="hidden" name="card_id_to_copy" value="{{ result[0] }}">
+                                                    <button type="submit" class="btn btn-outline-success btn-sm me-2">複製</button>
+                                                </form>
+                                                <!-- Button to trigger edit modal -->
+                                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editModal-{{ loop.index }}">
+                                                    編輯
+                                                </button>
+                                                <!-- Modal for editing card details -->
+                                                <div class="modal fade" id="editModal-{{ loop.index }}" tabindex="-1" aria-labelledby="editModalLabel-{{ loop.index }}" aria-hidden="true">
+                                                    <div class="modal-dialog modal-lg">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title" id="editModalLabel-{{ loop.index }}">編輯名片 - {{ result[0] }}</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <form method="POST" id="editForm-{{ loop.index }}">
+                                                                    <input type="hidden" name="card_id" value="{{ result[0] }}">
+                                                                    <input type="hidden" name="action" value="update">
+                                                                    <input type="hidden" name="original_search_term" value="{{ request.form.get('search_term', '') }}">
+                                                                    <div class="row">
+                                                                        <div class="col-md-6">
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label">中文姓名</label>
+                                                                                <input type="text" class="form-control" name="staff_cname" value="{{ result[1] or '' }}">
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label">英文姓名</label>
+                                                                                <input type="text" class="form-control" name="staff_ename" value="{{ result[2] or '' }}" required>
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label">公司名稱</label>
+                                                                                <input type="text" class="form-control" name="company_name" value="{{ result[3] or '' }}">
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label">職稱</label>
+                                                                                <input type="text" class="form-control" name="title" value="{{ result[4] or '' }}">
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-md-6">
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label">電郵</label>
+                                                                                <input type="text" class="form-control" name="email" value="{{ result[5] or '' }}" required>
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label">辦公室電話</label>
+                                                                                <input type="text" class="form-control" name="office_phone_no" value="{{ result[6] or '' }}">
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label">手機號碼</label>
+                                                                                <input type="text" class="form-control" name="mobile_phone_no" value="{{ result[7] or '' }}">
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label">手機號碼2</label>
+                                                                                <input type="text" class="form-control" name="mobile_phone_no1" value="{{ result[8] or '' }}">
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label class="form-label">QR Code 印刷日期</label>
+                                                                                <input type="date" class="form-control" name="print_date" value="{{ result[11] if result[11] else '' }}">
+                                                                            </div>
+                                                                            <div class="mb-3">
+                                                                                <label style="visibility: hidden;" class="form-label">網站</label>
+                                                                                <input style="visibility: hidden;" type="text" class="form-control" name="website" value="{{ result[9] or '' }}">
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="modal-footer">
+                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                                                        <input type="submit" class="btn btn-danger" value="更新">
+                                                                    </div>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <!-- Download link for QR code -->
+                                                <a href="{{ url_for('static', filename='qr_codes/' + result[10]) }}" download="{{ result[10] }}">
+                                                    <button type="button" class="btn btn-success btn-sm">下載</button>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Bootstrap 5 JS bundle from CDN for interactive components -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <!-- Include custom heartbeat script for session management -->
+    <script src="{{ url_for('static', filename='js/heartbeat.js') }}"></script>
+    <!-- JavaScript to reset modal forms on close -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add event listeners for each edit modal
+            {% for result in results %}
+                var modal_{{ loop.index }} = document.getElementById('editModal-{{ loop.index }}');
+                modal_{{ loop.index }}.addEventListener('hidden.bs.modal', function () {
+                    // Reset the form when the modal is closed
+                    document.getElementById('editForm-{{ loop.index }}').reset();
+                });
+            {% endfor %}
+        });
+    </script>
+</body>
+</html>
